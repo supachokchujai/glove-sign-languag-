@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Generated artifacts — regenerate with train_model3.py / convert_dataset.py
+*.pkl
+confusion_matrix.png
+dynamic_data_60fnew.json
+dynamic_data_60fnew.npz
+dynamic_data_60fnew.joblib
+
+# App / tool state
+.freebuff/
+.zcode/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

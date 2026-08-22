@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Glove Translator AI</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background: #f4f7f6;
+            padding-top: 50px;
+        }
+
+        .container {
+            background: white;
+            max-width: 500px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-box {
+            font-size: 80px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 20px 0;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #eee;
+            border-radius: 10px;
+        }
+
+        #btn-record {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 50px;
+            background: #27ae60;
+            color: white;
+            transition: 0.3s;
+        }
+
+        #btn-record:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 15px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ระบบแปลภาษามือ</h1>
+        <p>ทำท่าทางหลังกดปุ่มและค้างไว้ 3 วินาที (60 เฟรม @ ~20Hz)</p>
+
+        <div class="result-box" id="result">?</div>
+
+        <button id="btn-record" onclick="startPredict()">เริ่มแปลท่าทาง</button>
+        <p id="status-text" class="status">พร้อมใช้งาน</p>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                const btn = document.getElementById('btn-record');
+                if (!btn.disabled) {
+                    startPredict();
+                }
+            }
+        });
+
+        async function startPredict() {
+            const btn = document.getElementById('btn-record');
+            const resultBox = document.getElementById('result');
+            const statusText = document.getElementById('status-text');
+
+            btn.disabled = true;
+            btn.innerText = "กำลังบันทึก...";
+            statusText.innerText = "กรุณาทำท่าทางค้างไว้...";
+            resultBox.innerText = "...";
+
+            try {
+                const response = await fetch('/predict_once');
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    resultBox.innerText = data.prediction;
+                    const dur = data.duration_seconds ? ` (${data.duration_seconds} วิ)` : "";
+                    statusText.innerText = `แปลผลสำเร็จ!${dur}`;
+                } else {
+                    resultBox.innerText = "Fail";
+                    statusText.innerText = `เกิดข้อผิดพลาด: ${data.message}`;
+                }
+            } catch (err) {
+                resultBox.innerText = "Error";
+                statusText.innerText = "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "เริ่มแปลท่าทาง";
+            }
+        }
+    </script>
+</body>
+</html>

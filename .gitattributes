@@ -1,0 +1,9 @@
+# Normalize line endings — files stay LF in the repo, converted as needed on checkout
+* text=auto
+
+# Binary files must never be touched
+*.pdf binary
+*.png binary
+*.pkl binary
+*.npz binary
+*.joblib binary
