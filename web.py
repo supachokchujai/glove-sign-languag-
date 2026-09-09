@@ -1,6 +1,7 @@
 import json
 import socket
 import sys
+import threading
 import time
 
 import joblib
@@ -29,6 +30,39 @@ UDP_PORT = config.UDP_PORT
 FRAME_GAP_TIMEOUT = 1.0     # seconds without a packet -> give up
 MAX_RECORD_SECONDS = 6.0    # hard cap (60 frames @ ~20 Hz needs ~3 s)
 
+# One UDP socket for the app's lifetime, created lazily on first use so that
+# merely importing web.py (e.g. from tests) does not claim the port.
+_receiver = None
+_receiver_lock = threading.Lock()
+_record_lock = threading.Lock()   # only one gesture collection at a time
+
+
+def _get_receiver():
+    """Create and bind the UDP socket once; reuse it for every request."""
+    global _receiver
+    with _receiver_lock:
+        if _receiver is None:
+            # No SO_REUSEADDR on purpose: on Windows it would let a second
+            # socket silently steal the port instead of failing fast. A UDP
+            # receiver doesn't need it (no TIME_WAIT like TCP).
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.bind((UDP_IP, UDP_PORT))
+            sock.settimeout(FRAME_GAP_TIMEOUT)
+            _receiver = sock
+        return _receiver
+
+
+def _drain_socket(sock):
+    """Discard stale packets buffered before this recording started."""
+    sock.settimeout(0)
+    try:
+        while True:
+            sock.recvfrom(2048)
+    except BlockingIOError:
+        pass
+    finally:
+        sock.settimeout(FRAME_GAP_TIMEOUT)
+
 
 @app.route('/')
 def index():
@@ -37,15 +71,27 @@ def index():
 
 @app.route('/predict_once')
 def predict_once():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((UDP_IP, UDP_PORT))
-    sock.settimeout(FRAME_GAP_TIMEOUT)
+    if not _record_lock.acquire(blocking=False):
+        return jsonify({
+            "status": "error",
+            "message": "Another prediction is already in progress",
+        })
 
-    buffer_frames = []
     start = time.monotonic()
     print(f"Starting gesture recording (waiting for {expected_frames} frames)...")
 
     try:
+        try:
+            sock = _get_receiver()
+        except OSError as e:
+            msg = (f"Cannot bind UDP port {UDP_PORT} — is savedata1.py or a "
+                   f"monitor script already running? ({e})")
+            print(f"Error: {msg}")
+            return jsonify({"status": "error", "message": msg})
+
+        _drain_socket(sock)
+
+        buffer_frames = []
         while len(buffer_frames) < expected_frames:
             if time.monotonic() - start > MAX_RECORD_SECONDS:
                 return jsonify({
@@ -81,8 +127,20 @@ def predict_once():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
     finally:
-        sock.close()
+        _record_lock.release()
 
 
 if __name__ == '__main__':
-    app.run(host=config.WEB_HOST, port=config.WEB_PORT, debug=True)
+    # Claim the UDP port up front so a conflict is reported immediately,
+    # not on the first click of the predict button.
+    try:
+        _get_receiver()
+    except OSError as e:
+        print(f"Critical Error: cannot bind UDP port {UDP_PORT} — is "
+              f"savedata1.py or a monitor script already running?\n  {e}")
+        sys.exit(1)
+
+    # debug reloader must stay off: it spawns a second process that would
+    # fight over the UDP socket.
+    print(f"Web app ready: http://localhost:{config.WEB_PORT}")
+    app.run(host=config.WEB_HOST, port=config.WEB_PORT, debug=False, use_reloader=False)
