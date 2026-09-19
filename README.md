@@ -57,12 +57,6 @@
 - **การแบ่งข้อมูล**: Train/Test 80:20 (stratify ตามคลาส)
 - **ผลการประเมิน**: ทดสอบกับท่าจริงท่าละ 30 ครั้ง → ความแม่นยำเฉลี่ย **96.02%**
 
-ผลการจำแนกบนชุดทดสอบ (Confusion Matrix 31 คลาส):
-
-<p align="center">
-  <img src="docs/confusion_matrix.png" alt="Confusion Matrix" width="480">
-</p>
-
 ## สถาปัตยกรรม
 
 ```
