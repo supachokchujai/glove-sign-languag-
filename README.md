@@ -113,4 +113,9 @@ web.py                    # เว็บแอป
 templates/index.html      # หน้าเว็บ
 sketch_feb11a/main/       # Firmware ESP32 (main.ino + config.h)
 tests/                    # unit tests
+thesis.pdf                # เอกสารประกอบโครงงาน (PDF)
 ```
+
+## เอกสารประกอบ
+
+รายละเอียดโครงงานฉบับเต็ม (ทฤษฎี, วิธีการ, ผลการทดลอง): [thesis.pdf](thesis.pdf)
