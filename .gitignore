@@ -7,7 +7,7 @@ venv/
 
 # Generated artifacts — regenerate with train_model3.py / convert_dataset.py
 *.pkl
-confusion_matrix.png
+/confusion_matrix.png
 dynamic_data_60fnew.json
 dynamic_data_60fnew.npz
 dynamic_data_60fnew.joblib
